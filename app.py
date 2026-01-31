@@ -1,109 +1,167 @@
 import streamlit as st
 import pandas as pd
-from datetime import date, timedelta
+from datetime import date
 from streamlit_gsheets import GSheetsConnection
 
-# --- 1. CONFIGURATION & STYLING ---
-st.set_page_config(page_title="Account Book - Aram", page_icon="💳", layout="centered", initial_sidebar_state="collapsed")
+# --- 1. CONFIGURATION & RESPONSIVE DESIGN SYSTEM ---
+st.set_page_config(page_title="Account Book", page_icon="", layout="wide", initial_sidebar_state="collapsed")
 
-# 💎 PROFESSIONAL FINTECH CSS (Stable Streamlit Version)
+# Apple-Style Responsive CSS (Desktop & Mobile)
 st.markdown("""
     <style>
-    /* Font & Background */
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    /* 1. Global Typography & Reset */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
     
     .stApp {
-        background-color: #F8FAFC; /* Slate-50 */
-        font-family: 'Inter', sans-serif;
+        background-color: #F5F5F7; /* Apple System Gray 6 */
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        color: #1D1D1F;
     }
     
-    /* Mobile Container Constraint */
+    /* 2. Responsive Container Logic - PADDING UPDATED */
     .main .block-container {
-        max-width: 480px;
-        padding-top: 1rem;
-        padding-bottom: 5rem;
-        padding-left: 1rem;
-        padding-right: 1rem;
-        background-color: #FFFFFF;
-        min-height: 100vh;
+        padding-top: 0rem;  /* REMOVED TOP SPACE */
+        padding-bottom: 1rem; /* REDUCED BOTTOM SPACE */
         margin: 0 auto;
-        box-shadow: 0 0 20px rgba(0,0,0,0.03);
+        transition: max-width 0.3s ease;
     }
 
-    /* Hide Streamlit Bloat */
-    #MainMenu, footer, header {visibility: hidden;}
-    div[data-testid="stToolbar"] { display: none; }
-
-    /* --- WIDGETS --- */
+    /* DESKTOP VIEW */
+    @media (min-width: 768px) {
+        .main .block-container {
+            max-width: 950px;
+            padding-left: 1rem; /* REDUCED LEFT SPACE */
+            padding-right: 1rem; /* REDUCED RIGHT SPACE */
+        }
+    }
     
-    /* Balance Card */
-    div[data-testid="stMetric"] {
-        background: linear-gradient(135deg, #4F46E5 0%, #6366F1 100%);
-        padding: 20px;
-        border-radius: 20px;
-        color: white !important;
-        box-shadow: 0 10px 25px -5px rgba(79, 70, 229, 0.4);
+    /* MOBILE VIEW */
+    @media (max-width: 767px) {
+        .main .block-container {
+            max-width: 100%;
+            padding-left: 0.5rem; /* REDUCED LEFT SPACE */
+            padding-right: 0.5rem; /* REDUCED RIGHT SPACE */
+        }
     }
-    div[data-testid="stMetric"] label { color: rgba(255,255,255,0.8) !important; font-size: 14px !important; }
-    div[data-testid="stMetric"] div[data-testid="stMetricValue"] { color: white !important; font-size: 32px !important; font-weight: 700 !important; }
-    div[data-testid="stMetric"] div[data-testid="stMetricDelta"] { color: rgba(255,255,255,0.9) !important; }
 
-    /* Tabs */
+    /* 3. Gap Reduction */
+    div[data-testid="stVerticalBlock"] {
+        gap: 0.6rem !important;
+    }
+    
+    /* Hide Header/Footer */
+    #MainMenu, footer, header {visibility: hidden;}
+    
+    /* 4. Apple Wallet Card */
+    .wallet-card {
+        background: linear-gradient(135deg, #007AFF 0%, #0055D4 100%);
+        border-radius: 22px;
+        padding: 24px 24px;
+        color: white;
+        margin-bottom: 12px;
+        box-shadow: 0 10px 25px -5px rgba(0, 122, 255, 0.35);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .wallet-card::before {
+        content: "";
+        position: absolute;
+        top: -50%; left: -50%; width: 200%; height: 200%;
+        background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 60%);
+        transform: rotate(30deg);
+        pointer-events: none;
+    }
+
+    .bal-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.85; margin-bottom: 4px; }
+    .bal-val { font-size: 38px; font-weight: 700; letter-spacing: -1px; margin-bottom: 24px; }
+    
+    /* Mini Stats Grid */
+    .stats-row {
+        display: flex;
+        justify-content: space-between;
+        background: rgba(0, 0, 0, 0.18);
+        border-radius: 14px;
+        padding: 14px 0;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+    }
+    .stat-item { text-align: center; width: 25%; border-right: 1px solid rgba(255,255,255,0.15); }
+    .stat-item:last-child { border-right: none; }
+    .stat-lbl { font-size: 9px; opacity: 0.85; font-weight: 600; margin-bottom: 2px; letter-spacing: 0.5px; }
+    .stat-num { font-size: 13px; font-weight: 600; }
+
+    /* 5. Inputs & Buttons */
+    .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"] {
+        background-color: #FFFFFF !important;
+        border: 1px solid #D1D1D6 !important;
+        border-radius: 10px !important;
+        height: 42px !important;
+        color: #1D1D1F !important;
+    }
+    
+    /* Button Styling */
+    .stButton button {
+        border-radius: 12px;
+        font-weight: 600;
+        height: 44px;
+        margin-top: 0px !important;
+        border: none;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        transition: all 0.2s ease;
+    }
+    
+    /* Primary Button (Add) */
+    div[data-testid="stVerticalBlock"] button[kind="primary"] {
+        background-color: #007AFF; 
+        color: white;
+    }
+    div[data-testid="stVerticalBlock"] button[kind="primary"]:hover {
+        background-color: #0062CC;
+        box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
+    }
+
+    /* Secondary Buttons (Sync, Export) */
+    div[data-testid="stVerticalBlock"] button[kind="secondary"] {
+        background-color: #FFFFFF;
+        color: #1D1D1F;
+        border: 1px solid #E5E5EA;
+    }
+    div[data-testid="stVerticalBlock"] button[kind="secondary"]:hover {
+        background-color: #F2F2F7;
+        border-color: #D1D1D6;
+    }
+
+    /* 6. Tabs */
     .stTabs [data-baseweb="tab-list"] {
-        background-color: #F1F5F9;
+        background-color: #E5E5EA;
         padding: 4px;
         border-radius: 12px;
-        gap: 0;
-        margin-top: 20px;
-        margin-bottom: 20px;
+        margin-bottom: 16px;
     }
     .stTabs [data-baseweb="tab"] {
-        height: 40px; border-radius: 8px; border: none;
-        color: #64748B; font-weight: 600; font-size: 14px; flex: 1;
+        height: 32px;
+        border-radius: 8px;
+        border: none;
+        color: #8E8E93;
+        font-weight: 500;
+        font-size: 13px;
+        flex: 1;
     }
     .stTabs [aria-selected="true"] {
-        background-color: #FFFFFF; color: #4F46E5; box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    }
-
-    /* Inputs */
-    .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"] {
-        background-color: #F8FAFC;
-        border: 1px solid #E2E8F0;
-        border-radius: 12px;
-        height: 48px;
-        color: #1E293B;
-    }
-
-    /* Buttons */
-    div.stButton > button {
-        border-radius: 12px;
-        height: 48px;
+        background-color: #FFFFFF;
+        color: #000000;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.08);
         font-weight: 600;
-        border: none;
-        width: 100%;
-        transition: all 0.2s;
     }
     
-    /* Primary Action Button (FAB) */
-    .element-container:has(button[title="Add"]) {
-        position: fixed;
-        bottom: 24px;
-        right: 24px;
-        z-index: 999;
-        width: auto !important;
-    }
-    button[title="Add"] {
-        width: 60px !important;
-        height: 60px !important;
-        border-radius: 30px !important;
-        background: #0F172A !important; /* Dark Slate */
-        color: white !important;
-        font-size: 28px !important;
-        box-shadow: 0 8px 20px rgba(15, 23, 42, 0.3) !important;
-        padding: 0 !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
+    /* 7. Dataframe */
+    div[data-testid="stDataFrame"] {
+        background: white;
+        border-radius: 16px;
+        padding: 0px; 
+        border: 1px solid #E5E5EA;
+        overflow: hidden;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -137,179 +195,231 @@ def load_data(conn):
         if 'AMOUNT' in df.columns: df['AMOUNT'] = df['AMOUNT'].apply(clean_currency)
         if 'BALANCE' in df.columns: df['BALANCE'] = df['BALANCE'].apply(clean_currency)
         return df
-    except:
+    except Exception:
         return pd.DataFrame(columns=["DATE", "TRN. ID", "TRN. TYPE", "CATEGORY", "DESCRIPTION", "AMOUNT", "TRN. MODE", "BILL/VOUCHER", "BALANCE", "REMARKS"])
 
 def recalculate_and_save(conn, df):
     with st.spinner("Processing..."):
-        if 'TRN. ID' in df.columns: df['TRN. ID'] = pd.to_numeric(df['TRN. ID'], errors='coerce').fillna(0)
-        if 'AMOUNT' in df.columns: df['AMOUNT'] = df['AMOUNT'].apply(clean_currency)
+        if 'TRN. ID' in df.columns:
+            df['TRN. ID'] = pd.to_numeric(df['TRN. ID'], errors='coerce').fillna(0)
+        if 'AMOUNT' in df.columns:
+            df['AMOUNT'] = df['AMOUNT'].apply(clean_currency)
+            
         df = df.sort_values(by=['DATE', 'TRN. ID'], ascending=[True, True]).reset_index(drop=True)
-        
-        bal = 0.0
-        bals = []
-        # Calculate running balance (oldest to newest)
-        calc_df = df.copy()
-        for _, row in calc_df.iterrows():
+        running_balance = 0.0
+        new_balances = []
+        for index, row in df.iterrows():
             amt = row['AMOUNT']
-            t = row['TRN. TYPE']
-            if t in ["CREDIT", "ADV-IN"]: bal += amt
-            elif t in ["EXPENSE", "ADV-OUT"]: bal -= amt
-            bals.append(bal)
-        calc_df['BALANCE'] = bals
-        
-        conn.update(data=calc_df)
-        return calc_df
+            t_type = row['TRN. TYPE']
+            if t_type in ["CREDIT", "ADV-IN"]: running_balance += amt
+            elif t_type in ["EXPENSE", "ADV-OUT"]: running_balance -= amt
+            new_balances.append(running_balance)
+            
+        df['BALANCE'] = new_balances
+        conn.update(data=df)
+        return df
 
-# --- 4. INIT ---
+# --- 4. DATA LOADING ---
 conn = st.connection("gsheets", type=GSheetsConnection)
-if "df" not in st.session_state: st.session_state.df = load_data(conn)
+if "df" not in st.session_state:
+    st.session_state.df = load_data(conn)
 df = st.session_state.df
 
-# --- DIALOGS ---
+# --- DIALOGS (MODALS) ---
 @st.dialog("New Entry")
-def add_dialog():
-    with st.form("add_form", clear_on_submit=True):
-        amt = st.number_input("Amount (₹)", min_value=0.0, step=100.0)
-        c1, c2 = st.columns(2)
-        with c1: dte = st.date_input("Date", value=date.today())
-        with c2: typ = st.selectbox("Type", TRN_TYPES)
+def add_transaction_dialog():
+    st.write("")
+    with st.form("new_entry_form", clear_on_submit=True):
+        amount = st.number_input("Amount", min_value=0.0, step=100.0, format="%.2f")
+        c1, c2 = st.columns([1, 1.3])
+        with c1: txn_date = st.date_input("Date", value=date.today())
+        with c2: txn_type = st.selectbox("Type", TRN_TYPES)
         
-        # Smart Category
-        def_cat_idx = 0
-        if typ in CATEGORIES: def_cat_idx = CATEGORIES.index(typ)
-        cat = st.selectbox("Category", CATEGORIES, index=def_cat_idx)
+        cat_idx = CATEGORIES.index(txn_type) if txn_type in CATEGORIES else 0
+        category = st.selectbox("Category", CATEGORIES, index=cat_idx)
+        desc = st.text_input("Description", placeholder="Description")
+        c5, c6 = st.columns(2)
+        with c5: mode = st.selectbox("Mode", MODES)
+        with c6: doc = st.selectbox("Proof", DOC_TYPES)
+        rem = st.text_input("Remarks", placeholder="Notes")
         
-        desc = st.text_input("Description", placeholder="e.g. Fuel")
-        c3, c4 = st.columns(2)
-        with c3: mod = st.selectbox("Mode", MODES)
-        with c4: doc = st.selectbox("Proof", DOC_TYPES)
-        rem = st.text_input("Remarks")
-        
-        if st.form_submit_button("Save", type="primary"):
-            nid = 1
-            if not df.empty:
-                try: nid = int(df['TRN. ID'].max()) + 1
-                except: nid = len(df) + 1
-            new_row = {"DATE": pd.to_datetime(dte), "TRN. ID": nid, "TRN. TYPE": typ, "CATEGORY": cat, "DESCRIPTION": desc, "AMOUNT": amt, "TRN. MODE": mod, "BILL/VOUCHER": doc, "BALANCE": 0, "REMARKS": rem}
-            st.session_state.df = recalculate_and_save(conn, pd.concat([df, pd.DataFrame([new_row])], ignore_index=True))
+        st.write("")
+        if st.form_submit_button("Done", type="primary"):
+            new_id = 1
+            if not df.empty and 'TRN. ID' in df:
+                try: new_id = int(df['TRN. ID'].max()) + 1
+                except: new_id = len(df) + 1
+            new_row = {
+                "DATE": pd.to_datetime(txn_date), "TRN. ID": new_id, "TRN. TYPE": txn_type, "CATEGORY": category,
+                "DESCRIPTION": desc, "AMOUNT": amount, "TRN. MODE": mode, "BILL/VOUCHER": doc, "BALANCE": 0, "REMARKS": rem
+            }
+            updated_df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
+            st.session_state.df = recalculate_and_save(conn, updated_df)
             st.rerun()
 
-@st.dialog("Edit Entry")
-def edit_dialog(row, rid):
+@st.dialog("Edit Detail")
+def edit_transaction_dialog(row_to_edit, selected_id):
+    st.write("")
     with st.form("edit_form"):
-        st.caption(f"ID: #{rid}")
-        dte = st.date_input("Date", value=row['DATE'])
-        amt = st.number_input("Amount", value=clean_currency(row['AMOUNT']))
-        typ = st.selectbox("Type", TRN_TYPES, index=TRN_TYPES.index(row['TRN. TYPE']) if row['TRN. TYPE'] in TRN_TYPES else 0)
-        cat = st.selectbox("Category", CATEGORIES, index=CATEGORIES.index(row['CATEGORY']) if row['CATEGORY'] in CATEGORIES else 0)
-        desc = st.text_input("Description", value=str(row['DESCRIPTION']))
-        mod = st.selectbox("Mode", MODES, index=MODES.index(row['TRN. MODE']) if row['TRN. MODE'] in MODES else 0)
-        
-        b1, b2 = st.columns(2)
-        if b1.form_submit_button("Update"):
-            idx = df[df['TRN. ID'] == rid].index[0]
-            df.at[idx, 'DATE'] = pd.to_datetime(dte)
-            df.at[idx, 'TRN. TYPE'] = typ
-            df.at[idx, 'CATEGORY'] = cat
-            df.at[idx, 'AMOUNT'] = amt
-            df.at[idx, 'DESCRIPTION'] = desc
-            df.at[idx, 'TRN. MODE'] = mod
+        ec1, ec2 = st.columns(2)
+        with ec1: e_amt = st.number_input("Amount", value=clean_currency(row_to_edit['AMOUNT']))
+        with ec2: e_date = st.date_input("Date", value=row_to_edit['DATE'])
+        e_type = st.selectbox("Type", TRN_TYPES, index=TRN_TYPES.index(row_to_edit['TRN. TYPE']) if row_to_edit['TRN. TYPE'] in TRN_TYPES else 0)
+        e_cat = st.selectbox("Category", CATEGORIES, index=CATEGORIES.index(row_to_edit['CATEGORY']) if row_to_edit['CATEGORY'] in CATEGORIES else 0)
+        e_desc = st.text_input("Description", value=str(row_to_edit['DESCRIPTION']))
+        ec3, ec4 = st.columns(2)
+        with ec3: e_mode = st.selectbox("Mode", MODES, index=MODES.index(row_to_edit['TRN. MODE']) if row_to_edit['TRN. MODE'] in MODES else 0)
+        with ec4: e_doc = st.selectbox("Proof", DOC_TYPES, index=DOC_TYPES.index(row_to_edit['BILL/VOUCHER']) if row_to_edit['BILL/VOUCHER'] in DOC_TYPES else 0)
+        e_rem = st.text_input("Remarks", value=str(row_to_edit['REMARKS']) if pd.notnull(row_to_edit['REMARKS']) else "")
+        st.write("---")
+        bc1, bc2 = st.columns(2)
+        if bc1.form_submit_button("Save", type="primary", use_container_width=True):
+            idx = df[df['TRN. ID'] == selected_id].index[0]
+            df.at[idx, 'DATE'] = pd.to_datetime(e_date); df.at[idx, 'TRN. TYPE'] = e_type; df.at[idx, 'CATEGORY'] = e_cat
+            df.at[idx, 'AMOUNT'] = e_amt; df.at[idx, 'DESCRIPTION'] = e_desc; df.at[idx, 'TRN. MODE'] = e_mode
+            df.at[idx, 'BILL/VOUCHER'] = e_doc; df.at[idx, 'REMARKS'] = e_rem
             st.session_state.df = recalculate_and_save(conn, df)
             st.rerun()
-        if b2.form_submit_button("Delete", type="primary"):
-            st.session_state.df = recalculate_and_save(conn, df[df['TRN. ID'] != rid])
+        if bc2.form_submit_button("Delete", type="secondary", use_container_width=True):
+            new_df = df[df['TRN. ID'] != selected_id]
+            st.session_state.df = recalculate_and_save(conn, new_df)
             st.rerun()
 
-# --- 5. UI LAYOUT ---
+# --- 5. TOP HEADER & FILTER ---
 
-# Top Bar
-c_top1, c_top2 = st.columns([3, 1])
-with c_top1:
-    st.markdown("<h3 style='margin:0; padding-top:10px;'>Solar Finance</h3>", unsafe_allow_html=True)
-with c_top2:
-    if st.button("🔄", help="Sync"):
-        st.cache_data.clear()
-        st.session_state.df = recalculate_and_save(conn, conn.read(ttl=0))
-        st.rerun()
+# Date & Month Logic
+if not df.empty:
+    dates_df = df[['DATE']].copy()
+    dates_df['MonthLabel'] = dates_df['DATE'].dt.strftime('%B %Y')
+    dates_df['YearMonth'] = dates_df['DATE'].dt.to_period('M')
+    unique_months = dates_df.drop_duplicates('YearMonth').sort_values('YearMonth', ascending=False)['MonthLabel'].tolist()
+else:
+    unique_months = []
 
-st.write("")
+# --- Header Layout ---
+col_h1, col_h2 = st.columns([3, 1], vertical_alignment="center")
 
-# Balance Widget (Clean Card Style)
-curr_bal = df.iloc[-1]['BALANCE'] if not df.empty and 'BALANCE' in df.columns else 0.0
-st.metric("Current Balance", f"₹ {curr_bal:,.0f}")
+with col_h1:
+    # Custom Apple-Style Title
+    st.markdown("""
+    <div style="font-size: 28px; font-weight: 800; color: #1D1D1F; letter-spacing: -0.5px;">
+        Account Book
+    </div>
+    """, unsafe_allow_html=True)
 
-# Tabs
+with col_h2:
+    selected_month = unique_months[0] if unique_months else None
+    if unique_months:
+        selected_month = st.selectbox("Period", unique_months, label_visibility="collapsed")
+
+# --- 6. WALLET CARD ---
+current_bal = 0.0
+credit_sum, expense_sum, advin_sum, advout_sum = 0.0, 0.0, 0.0, 0.0
+
+if not df.empty:
+    try: current_bal = df.iloc[-1]['BALANCE']
+    except: pass
+
+if selected_month and not df.empty:
+    mask_month = df['DATE'].dt.strftime('%B %Y') == selected_month
+    month_df = df.loc[mask_month]
+    grp = month_df.groupby('TRN. TYPE')['AMOUNT'].sum()
+    credit_sum = grp.get('CREDIT', 0.0)
+    expense_sum = grp.get('EXPENSE', 0.0)
+    advin_sum = grp.get('ADV-IN', 0.0)
+    advout_sum = grp.get('ADV-OUT', 0.0)
+
+st.markdown(f"""
+    <div class="wallet-card">
+        <div class="bal-label">Total Balance</div>
+        <div class="bal-val">₹ {current_bal:,.0f}</div>
+        <div class="stats-row">
+            <div class="stat-item"><div class="stat-lbl">CREDIT</div><div class="stat-num">₹{credit_sum/1000:.1f}k</div></div>
+            <div class="stat-item"><div class="stat-lbl">EXPENSE</div><div class="stat-num">₹{expense_sum/1000:.1f}k</div></div>
+            <div class="stat-item"><div class="stat-lbl">ADV +</div><div class="stat-num">₹{advin_sum/1000:.1f}k</div></div>
+            <div class="stat-item"><div class="stat-lbl">ADV -</div><div class="stat-num">₹{advout_sum/1000:.1f}k</div></div>
+        </div>
+    </div>
+""", unsafe_allow_html=True)
+
+# --- 7. TABS & ACTIONS ---
 tab1, tab2 = st.tabs(["Transactions", "Analytics"])
 
-# === TAB 1: TRANSACTIONS ===
 with tab1:
-    if not df.empty:
-        # Search
-        search = st.text_input("Search...", placeholder="Filter transactions", label_visibility="collapsed")
-        
-        # Sort & Filter
-        view_df = df.sort_values(by=['DATE', 'TRN. ID'], ascending=False)
-        if search:
-            view_df = view_df[view_df.apply(lambda row: search.lower() in str(row).lower(), axis=1)]
+    # --- ACTION BUTTONS (EQUAL SIZE) ---
+    c_sync, c_add, c_exp = st.columns(3)
+    
+    with c_sync:
+        if st.button("↻ Sync", help="Reload Data", use_container_width=True):
+            st.cache_data.clear()
+            fresh_df = conn.read(ttl=0)
+            fresh_df.columns = fresh_df.columns.str.strip()
+            fresh_df['DATE'] = pd.to_datetime(fresh_df['DATE'], dayfirst=True, errors='coerce')
+            if 'AMOUNT' in fresh_df.columns: fresh_df['AMOUNT'] = fresh_df['AMOUNT'].apply(clean_currency)
+            st.session_state.df = recalculate_and_save(conn, fresh_df)
+            st.rerun()
+            
+    with c_add:
+        # Primary Action - Blue Button
+        if st.button("＋ Add", type="primary", help="Add Transaction", use_container_width=True):
+            add_transaction_dialog()
 
-        # Interactive Table
-        st.caption("Tap row to edit")
-        sel = st.dataframe(
-            view_df,
+    with c_exp:
+        if not df.empty:
+            csv_data = df.sort_values(by=['DATE', 'TRN. ID']).to_csv(index=False).encode('utf-8')
+            st.download_button("📥 Export", csv_data, "solar_backup.csv", "text/csv", use_container_width=True)
+        else:
+             st.button("📥 Export", disabled=True, use_container_width=True)
+
+    # --- TABLE ---
+    if not df.empty:
+        display_df = df.sort_values(by=['DATE', 'TRN. ID'], ascending=False).copy()
+        
+        # UPDATED: Replaced use_container_width=True with width='stretch'
+        selection = st.dataframe(
+            display_df,
             column_config={
                 "DATE": st.column_config.DateColumn("Date", format="DD MMM"),
-                "AMOUNT": st.column_config.NumberColumn("Amt", format="₹ %.0f"),
-                "CATEGORY": st.column_config.TextColumn("Category", width="medium"),
+                "AMOUNT": st.column_config.NumberColumn("Amt", format="₹%.0f"),
+                "TRN. TYPE": st.column_config.TextColumn("Type", width="small"),
                 "DESCRIPTION": st.column_config.TextColumn("Desc", width="medium"),
+                "BALANCE": st.column_config.NumberColumn("Bal", format="₹%.0f"),
                 "TRN. ID": st.column_config.NumberColumn("ID", format="%d"),
             },
-            use_container_width=True,
+            width="stretch", 
             hide_index=True,
             height=500,
             on_select="rerun",
             selection_mode="single-row"
         )
-        
-        if sel.selection.rows:
-            rid = view_df.iloc[sel.selection.rows[0]]['TRN. ID']
-            edit_dialog(df[df['TRN. ID'] == rid].iloc[0], rid)
+
+        if selection.selection.rows:
+            selected_row_index = selection.selection.rows[0]
+            selected_id = display_df.iloc[selected_row_index]['TRN. ID']
+            row_to_edit = df[df['TRN. ID'] == selected_id].iloc[0]
+            edit_transaction_dialog(row_to_edit, selected_id)
     else:
-        st.info("No transactions found.")
+        st.info("No recent transactions.")
 
-# === TAB 2: ANALYTICS ===
 with tab2:
+    st.write("")
     if not df.empty:
-        # 1. Monthly Filter
-        dates_df = df[['DATE']].copy()
-        dates_df['M'] = dates_df['DATE'].dt.strftime('%B %Y')
-        dates_df['YM'] = dates_df['DATE'].dt.to_period('M')
-        months = dates_df.drop_duplicates('YM').sort_values('YM', ascending=False)['M'].tolist()
-        
-        sel_month = st.selectbox("Select Month", months, label_visibility="collapsed")
-        
-        if sel_month:
-            mask = df['DATE'].dt.strftime('%B %Y') == sel_month
-            m_df = df.loc[mask]
-            
-            # 2. Stats Grid (2x2)
-            grp = m_df.groupby('TRN. TYPE')['AMOUNT'].sum()
-            
-            c_a1, c_a2 = st.columns(2)
-            with c_a1:
-                st.container(border=True).metric("Credit", f"₹ {grp.get('CREDIT', 0):,.0f}")
-                st.container(border=True).metric("Adv In", f"₹ {grp.get('ADV-IN', 0):,.0f}")
-            with c_a2:
-                st.container(border=True).metric("Expense", f"₹ {grp.get('EXPENSE', 0):,.0f}")
-                st.container(border=True).metric("Adv Out", f"₹ {grp.get('ADV-OUT', 0):,.0f}")
-                
-            # 3. Pivot Breakdown
-            st.write("")
-            st.subheader("Category Breakdown")
-            piv = m_df.groupby('CATEGORY')['AMOUNT'].sum().reset_index().sort_values('AMOUNT', ascending=False)
-            st.dataframe(piv, column_config={"AMOUNT": st.column_config.NumberColumn("Total", format="₹ %.0f")}, use_container_width=True, hide_index=True)
+        col_f1, col_f2 = st.columns(2)
+        with col_f1: date_range = st.date_input("Range", value=(df['DATE'].min().date(), df['DATE'].max().date()))
+        with col_f2: 
+            avail = list(df['TRN. TYPE'].unique())
+            sel_types = st.multiselect("Type", avail, default=[t for t in ["EXPENSE", "ADV-OUT"] if t in avail])
 
-# --- FAB (Add Button) ---
-if st.button("➕", key="fab_add", help="Add"):
-    add_dialog()
-
+        if len(date_range) == 2:
+            mask = (df['DATE'].dt.date >= date_range[0]) & (df['DATE'].dt.date <= date_range[1]) & (df['TRN. TYPE'].isin(sel_types))
+            df_filt = df.loc[mask]
+            
+            if not df_filt.empty:
+                pivot = df_filt.groupby('CATEGORY')['AMOUNT'].sum().reset_index().sort_values('AMOUNT', ascending=False)
+                st.metric("Total Selected", f"₹ {pivot['AMOUNT'].sum():,.0f}")
+                # UPDATED: Replaced use_container_width=True with width='stretch'
+                st.dataframe(pivot, column_config={"AMOUNT": st.column_config.NumberColumn("Total", format="₹ %.0f")}, width="stretch", hide_index=True)
+            else:
+                st.info("No data available.")
+    else:
+        st.info("Database is empty.")
