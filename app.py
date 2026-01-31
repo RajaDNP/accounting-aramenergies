@@ -4,7 +4,7 @@ from datetime import date
 from streamlit_gsheets import GSheetsConnection
 
 # --- 1. CONFIGURATION & STYLING ---
-st.set_page_config(page_title="Solar Finance", page_icon="☀️", layout="centered", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="accounting-aram", page_icon="☀️", layout="centered", initial_sidebar_state="collapsed")
 
 # Professional Mobile-First CSS (Fintech 2025)
 st.markdown("""
@@ -421,4 +421,5 @@ with tab2:
 # --- FLOATING ACTION BUTTON (ADD) ---
 # Fixed Position Button using valid Streamlit key targeting
 if st.button("➕", key="fab_add", help="Add Transaction"):
+
     add_transaction_dialog()
