@@ -4,7 +4,7 @@ from datetime import date, timedelta
 from streamlit_gsheets import GSheetsConnection
 
 # --- 1. CONFIGURATION & STYLING ---
-st.set_page_config(page_title="Solar Finance", page_icon="💳", layout="centered", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="Account Book - Aram", page_icon="💳", layout="centered", initial_sidebar_state="collapsed")
 
 # 💎 PROFESSIONAL FINTECH CSS (Stable Streamlit Version)
 st.markdown("""
@@ -312,3 +312,4 @@ with tab2:
 # --- FAB (Add Button) ---
 if st.button("➕", key="fab_add", help="Add"):
     add_dialog()
+
